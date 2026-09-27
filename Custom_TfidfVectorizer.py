@@ -160,6 +160,44 @@ def _compute_batched_similarities_parallel(titles, descriptions, weight_title, w
 
     return sp.vstack(filtered_batches)
 
+def _compute_sequential_batched_similarities(titles, descriptions, weight_title, weight_desc, batch_size, threshold):
+    vec_title = HybridTfidfVectorizer(analyzer='char_wb', ngram_range=(2, 4), min_df=2)
+    X_title = vec_title.fit_transform(titles)
+
+    vec_desc = HybridTfidfVectorizer(max_features=15000, analyzer='char_wb', ngram_range=(3, 3))
+    X_desc = vec_desc.fit_transform(descriptions)
+
+    X_title.data *= np.float32(np.sqrt(weight_title))
+    X_desc.data *= np.float32(np.sqrt(weight_desc))
+
+    n_samples = X_title.shape[0]
+    n_features_title = X_title.shape[1]
+    n_features_desc = X_desc.shape[1]
+
+    nnz_c = X_title.nnz + X_desc.nnz
+    data_c = np.empty(nnz_c, dtype=np.float32)
+    cols_c = np.empty(nnz_c, dtype=np.int32)
+    indptr_c = np.empty(n_samples + 1, dtype=np.int32)
+
+    fast_csr_hstack(X_title.data, X_title.indices, X_title.indptr,
+                    X_desc.data, X_desc.indices, X_desc.indptr,
+                    data_c, cols_c, indptr_c,
+                    n_features_title)
+
+    del X_title, X_desc
+    gc.collect()
+
+    X_combined = sp.csr_matrix((data_c, cols_c, indptr_c), shape=(n_samples, n_features_title + n_features_desc))
+
+    filtered_batches = []
+    f_append = filtered_batches.append
+
+    for start_idx in range(0, n_samples, batch_size):
+        end_idx = min(start_idx + batch_size, n_samples)
+        sim_batch = _process_combined_batch(start_idx, end_idx, X_combined, threshold)
+        f_append(sim_batch)
+
+    return sp.vstack(filtered_batches)
 
 def _compute_all_similarities(titles, descriptions, weight_title, weight_desc, threshold):
     vec_title = HybridTfidfVectorizer(analyzer='char_wb', ngram_range=(2, 4), min_df=2)
@@ -200,8 +238,9 @@ def _compute_all_similarities(titles, descriptions, weight_title, weight_desc, t
 def tfidf_vectorizer(titles, descriptions, algorithm="batched_parallel", weight_title=0.5, weight_desc=0.5,
                      batch_size=1000, threshold=0.4):
     if algorithm == "batched_parallel":
-        return _compute_batched_similarities_parallel(titles, descriptions, weight_title, weight_desc, batch_size,
-                                                      threshold)
+        return _compute_batched_similarities_parallel(titles, descriptions, weight_title, weight_desc, batch_size, threshold)
+    elif algorithm == "sequential_batched":
+        return _compute_sequential_batched_similarities(titles, descriptions, weight_title, weight_desc, batch_size, threshold)
     elif algorithm == "all":
         return _compute_all_similarities(titles, descriptions, weight_title, weight_desc, threshold)
     else:
