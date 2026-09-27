@@ -11,7 +11,7 @@ This repository contains my implementation of the TF-IDF algorithm.
             sim_total = tfidf_vectorizer(
                 titles=b_names,
                 descriptions=b_addrs,
-                algorithm="batched_parallel",
+                algorithm="batched_parallel", # algorithm="sequential_batched",
                 weight_title=0.5,
                 weight_desc=0.5,
                 batch_size=1000,
