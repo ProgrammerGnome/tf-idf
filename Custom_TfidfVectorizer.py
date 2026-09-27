@@ -239,7 +239,7 @@ def tfidf_vectorizer(titles, descriptions, algorithm="batched_parallel", weight_
                      batch_size=1000, threshold=0.4):
     if algorithm == "batched_parallel":
         return _compute_batched_similarities_parallel(titles, descriptions, weight_title, weight_desc, batch_size, threshold)
-    elif algorithm == "sequential_batched":
+    elif algorithm == "batched_sequential":
         return _compute_sequential_batched_similarities(titles, descriptions, weight_title, weight_desc, batch_size, threshold)
     elif algorithm == "all":
         return _compute_all_similarities(titles, descriptions, weight_title, weight_desc, threshold)

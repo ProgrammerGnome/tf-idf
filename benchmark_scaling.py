@@ -5,7 +5,7 @@ import tracemalloc
 import numpy as np
 from sklearn.datasets import fetch_20newsgroups
 
-from ScikitLearn_TfidfVectorizer import compute_sklearn_batched_similarities
+from ScikitLearn_TfidfVectorizer import scikit_tfidf_vectorizer
 from Custom_TfidfVectorizer import tfidf_vectorizer
 
 def run_benchmark():
@@ -27,8 +27,8 @@ def run_benchmark():
     threshold_val = 0.4
     batch_size_val = 1000
 
-    limits = list(range(2500, 25000, 2500))
-    #limits = list(range(17500, 20000, 2500))
+    #limits = list(range(2500, 25000, 2500))
+    limits = list(range(17500, 20000, 2500))
 
     os.makedirs("./outputs", exist_ok=True)
     benchmark_file = "outputs/benchmark_scaling.txt"
@@ -47,7 +47,7 @@ def run_benchmark():
             # # 1. Sklearn All (Egy szálon futó, teljes memóriát igénylő)
             # tracemalloc.start()
             # t0 = time.time()
-            # sim = compute_cell12_similarities(titles, descriptions, threshold=threshold_val)
+            # sim = scikit_tfidf_vectorizer(titles, descriptions, threshold=threshold_val)
             # time_sec = time.time() - t0
             # _, peak_mem = tracemalloc.get_traced_memory()
             # tracemalloc.stop()
@@ -58,7 +58,7 @@ def run_benchmark():
             tracemalloc.start()
             t0 = time.time()
             # A korábbi módosításunk miatt ez a függvény már alapból a loky backendet használja
-            sim = compute_sklearn_batched_similarities(titles, descriptions, batch_size=batch_size_val, threshold=threshold_val)
+            sim = scikit_tfidf_vectorizer(titles, descriptions, algorithm="batched_sequential", batch_size=batch_size_val, threshold=threshold_val)
             time_sec = time.time() - t0
             _, peak_mem = tracemalloc.get_traced_memory()
             tracemalloc.stop()
@@ -79,7 +79,7 @@ def run_benchmark():
             tracemalloc.start()
             t0 = time.time()
             # Itt átállítottuk az algoritmust a 'batched_parallel'-re!
-            sim = tfidf_vectorizer(titles, descriptions, algorithm="batched_parallel", batch_size=batch_size_val, threshold=threshold_val)
+            sim = tfidf_vectorizer(titles, descriptions, algorithm="batched_sequential", batch_size=batch_size_val, threshold=threshold_val)
             time_sec = time.time() - t0
             _, peak_mem = tracemalloc.get_traced_memory()
             tracemalloc.stop()

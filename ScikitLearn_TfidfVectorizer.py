@@ -83,3 +83,43 @@ def compute_sklearn_batched_similarities(titles, descriptions, batch_size=1000, 
     )
 
     return sp.vstack(filtered_batches)
+
+def compute_sklearn_sequential_batched_similarities(titles, descriptions, batch_size=1000, threshold=0.4):
+    vec_name = TfidfVectorizer(
+        analyzer='char_wb',
+        ngram_range=(2, 4),
+        lowercase=True,
+        min_df=2,
+        sublinear_tf=True,
+        strip_accents='unicode'
+    )
+    vec_addr = TfidfVectorizer(
+        analyzer='char_wb',
+        ngram_range=(3, 3),
+        max_features=15000
+    )
+
+    tfidf_name = vec_name.fit_transform(titles)
+    tfidf_addr = vec_addr.fit_transform(descriptions)
+
+    n_samples = tfidf_name.shape[0]
+    filtered_batches = []
+    f_append = filtered_batches.append
+
+    for start_idx in range(0, n_samples, batch_size):
+        end_idx = min(start_idx + batch_size, n_samples)
+        sim_batch = _process_sklearn_batch(start_idx, end_idx, tfidf_name, tfidf_addr, threshold)
+        f_append(sim_batch)
+
+    return sp.vstack(filtered_batches)
+
+def scikit_tfidf_vectorizer(titles, descriptions, algorithm="batched_parallel", batch_size=1000, threshold=0.4):
+    if algorithm == "batched_parallel":
+        return compute_sklearn_batched_similarities(titles, descriptions, batch_size=batch_size, threshold=threshold)
+    elif algorithm == "batched_sequential":
+        return compute_sklearn_sequential_batched_similarities(titles, descriptions, batch_size=batch_size, threshold=threshold)
+    elif algorithm == "all":
+        return compute_cell12_similarities(titles, descriptions, threshold=threshold)
+    else:
+        raise ValueError(
+            "Érvénytelen algoritmus! Kérlek, használd az algorithm='batched_parallel', 'sequential_batched' vagy 'all' paramétert.")
